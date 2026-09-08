@@ -10,13 +10,10 @@
 - [x] Group the list by target date with separators
 - [x] Move persistence to a zustand store on `localStorage` (survives closing the tab)
 - [x] Vite build + GitHub Pages deploy workflow
+- [x] Live at https://alsapalat.github.io/todo-app/ (auto-deploys on push to `main`)
 - [x] Unit tests for the pure modules and the store (`npm test`, 60 passing)
-- [x] Headless browser check of the UI, grouping and reload persistence (`npm run check`, 22 passing)
+- [x] Headless browser check of the UI, grouping and reload persistence (`npm run check`, 26 passing)
 - [x] Dependency-free dev server (`npm run dev`)
-
-## Waiting on the operator
-- [ ] Push `main` to `git@github.com:alsapalat/todo-app.git` (remote is set, nothing pushed)
-- [ ] Set the repo's Pages source to **GitHub Actions** (Settings → Pages)
 
 ## Next (unstarted — ask before picking up)
 - [ ] Reorder tasks (drag or up/down)
