@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#fafaf9" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#0c0a09" media="(prefers-color-scheme: dark)" />
+<meta name="description" content="A simple, mobile-first to-do list. Nothing leaves this tab." />
+<title>Todo</title>
+<link rel="stylesheet" href="src/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>✓</text></svg>" />
+</head>
+<body>
+  <!-- Flat icon sprite: single-weight stroke icons, no fills. -->
+  <svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5 9.5 18 20 6.5" /></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+    <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L19 9a2.5 2.5 0 0 0-3.5-3.5L4 16.5V20Z" /></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10.5 10.5v6M13.5 10.5v6" /></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></symbol>
+    <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 13h4l1.5 3h5L16 13h4M4 13l2.5-7h11L20 13v5.5H4V13Z" /></symbol>
+  </svg>
+
+  <div class="app">
+    <header class="header">
+      <div class="header-row">
+        <h1>Today</h1>
+        <p class="date" id="date"></p>
+      </div>
+      <p class="count" id="count">Nothing yet</p>
+
+      <nav class="filters" id="filters" role="tablist" aria-label="Filter tasks">
+        <button class="filter" role="tab" data-filter="all" aria-selected="true">All</button>
+        <button class="filter" role="tab" data-filter="active" aria-selected="false">Active</button>
+        <button class="filter" role="tab" data-filter="done" aria-selected="false">Done</button>
+      </nav>
+    </header>
+
+    <main class="main">
+      <ul class="list" id="list" aria-label="Tasks"></ul>
+
+      <div class="empty" id="empty" hidden>
+        <svg class="icon icon-lg" aria-hidden="true"><use href="#i-inbox" /></svg>
+        <p class="empty-title" id="empty-title">No tasks yet</p>
+        <p class="empty-sub" id="empty-sub">Add one below to get started.</p>
+      </div>
+
+      <button class="clear" id="clear" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+        Clear completed
+      </button>
+    </main>
+
+    <form class="composer" id="composer" autocomplete="off">
+      <input
+        class="input"
+        id="input"
+        type="text"
+        name="task"
+        placeholder="Add a task"
+        aria-label="Add a task"
+        maxlength="200"
+        enterkeyhint="done"
+      />
+      <button class="add" id="add" type="submit" aria-label="Add task">
+        <svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg>
+      </button>
+    </form>
+  </div>
+
+  <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

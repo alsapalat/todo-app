@@ -1,0 +1,11 @@
+{
+  "name": "todo-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A simple, mobile-first single-page to-do list backed by sessionStorage.",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "test": "node --test test/store.test.mjs"
+  }
+}
