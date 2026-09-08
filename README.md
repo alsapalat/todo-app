@@ -20,6 +20,7 @@ npm run check    # details sheet + storage round trip, in headless Chrome
 | `src/theme.js`        | Theme preference (localStorage) + resolution     |
 | `src/richtext.js`     | Allowlist sanitiser for the description field    |
 | `src/dates.js`        | Target-date parsing, comparison and labels       |
+| `src/group.js`        | Buckets the visible list under date separators   |
 | `src/app.js`          | DOM rendering and event wiring                  |
 | `test/*.test.mjs`     | Unit tests for the four pure modules            |
 | `test/browser/`       | Headless integration check of the details sheet |
@@ -30,6 +31,8 @@ npm run check    # details sheet + storage round trip, in headless Chrome
 - Details: rename, a rich-text description (bold, italic, underline, strike,
   bullet and numbered lists) and a target date
 - Rows show a notes chip and the due date; overdue dates go amber
+- The list groups under date separators: Overdue, Today, Tomorrow, each later
+  day, then No date
 - All / Active / Done filters, clear-completed
 - Light/dark toggle in the header; follows the system until you override it
 - 44px tap targets, safe-area padding, iOS-safe 16px inputs

@@ -81,6 +81,31 @@ f.onload = async () => {
     await saveSheet();
     ok('a blank title keeps the old one', store()[0].title === 'Round trip renamed');
 
+    // Date grouping and separators.
+    await openDetails();
+    d.getElementById('d-due').value = '2026-12-25';
+    await saveSheet();
+    d.getElementById('input').value = 'Undated task';
+    d.getElementById('composer').dispatchEvent(new w.Event('submit', { cancelable: true }));
+    await wait(60);
+
+    const heads = [...d.querySelectorAll('.group-head span:first-child')]
+      .map((e) => e.textContent.trim());
+    ok('two dates produce two separators', heads.length === 2);
+    ok('the dated group is labelled by its date', /Dec 25/.test(heads[0]));
+    ok('the undated group sorts last', heads[1] === 'No date');
+    ok('separator shows a count', d.querySelector('.group-count').textContent.trim() === '1');
+    ok(
+      'a grouped row drops the now-redundant date chip',
+      !/Dec 25/.test(d.querySelector('.group .item .meta').textContent),
+    );
+
+    // A single group needs no separator.
+    d.querySelector('.group:last-child .item [data-act="remove"]').click();
+    await wait(60);
+    ok('one group renders no separator', d.querySelectorAll('.group-head').length === 0);
+    ok('an ungrouped row shows its date again', /Dec 25/.test(d.querySelector('.item .meta').textContent));
+
     out.textContent = log.join('\n');
   } catch (err) {
     out.textContent = `${log.join('\n')}\nFAIL threw: ${err.message}`;

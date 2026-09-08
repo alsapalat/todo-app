@@ -5,6 +5,7 @@ import {
 import { readTheme, writeTheme, nextTheme, resolveTheme } from './theme.js';
 import { sanitizeHtml, isEmptyHtml } from './richtext.js';
 import { toISODate, formatDue, isOverdue } from './dates.js';
+import { groupByDate } from './group.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -76,7 +77,10 @@ function render() {
   const visible = filter(tasks, current);
   const { total, active, done } = counts(tasks);
 
-  els.list.innerHTML = visible.map(row).join('');
+  const groups = groupByDate(visible, today);
+  // One group needs no separator to separate it from anything.
+  const separated = groups.length > 1;
+  els.list.innerHTML = groups.map((g) => section(g, separated)).join('');
   els.list.hidden = visible.length === 0;
 
   els.empty.hidden = visible.length > 0;
@@ -93,12 +97,32 @@ function render() {
   }
 }
 
-function row(t) {
+function section(group, separated) {
+  const head = separated
+    ? `<h2 class="group-head" id="group-${group.key}">
+         <span>${escape(group.label)}</span>
+         <span class="group-count">${group.tasks.length}</span>
+       </h2>`
+    : '';
+
+  // The heading already says the date, so only repeat it where a group mixes
+  // several days — which is just the overdue bucket.
+  const showDue = !separated || group.key === 'overdue';
+  const label = separated ? `aria-labelledby="group-${group.key}"` : 'aria-label="Tasks"';
+
+  return `
+    <section class="group${group.key === 'overdue' ? ' overdue' : ''}">
+      ${head}
+      <ul class="group-list" ${label}>${group.tasks.map((t) => row(t, showDue)).join('')}</ul>
+    </section>`;
+}
+
+function row(t, showDue = true) {
   const hasNotes = !isEmptyHtml(t.notes);
   const meta = [];
 
   if (hasNotes) meta.push(`<span class="tag">${icon('note', 'icon icon-xs')}Notes</span>`);
-  if (t.due) {
+  if (t.due && showDue) {
     const late = !t.done && isOverdue(t.due, today);
     meta.push(
       `<span class="tag${late ? ' late' : ''}">${icon('calendar', 'icon icon-xs')}${escape(formatDue(t.due, today))}</span>`,

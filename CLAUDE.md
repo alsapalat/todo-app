@@ -88,6 +88,11 @@ Helper scripts live in `/Users/adamleeapalat/Projects/discord-claude-setup/bin` 
   `close` event: `close` is not reliably delivered for a `method="dialog"`
   submit (it never fired at all under headless Chrome), which silently dropped
   every edit. Do not move the save back to `close`.
+- `src/group.js` buckets the visible tasks: all past days collapse into one
+  "Overdue" group, today/tomorrow are named, every later day gets its own, and
+  undated tasks sink last. A single group renders without a separator, and rows
+  drop their date chip when the heading already says it — except under Overdue,
+  which mixes days.
 - Description HTML is untrusted. `src/richtext.js` is an allowlist sanitiser
   written without the DOM so it is testable in node: text is escaped, every
   attribute is dropped, unknown tags lose their markup but keep their text, and

@@ -7,13 +7,13 @@
 - [x] Light + dark theme via `prefers-color-scheme`
 - [x] Light/dark toggle in the header, overriding the system setting
 - [x] Task details sheet: rich-text description + target date
-- [x] Unit tests for store, theme, sanitiser and dates (`npm test`, 44 passing)
-- [x] Headless browser check for the sheet + storage round trip (`npm run check`, 13 passing)
+- [x] Group the list by target date with separators
+- [x] Unit tests for the pure modules (`npm test`, 53 passing)
+- [x] Headless browser check of the sheet, storage and grouping (`npm run check`, 20 passing)
 - [x] Dependency-free dev server (`npm run dev`)
 
 ## Next (unstarted — ask before picking up)
 - [ ] Reorder tasks (drag or up/down)
 - [ ] Swipe-to-delete on touch
 - [ ] Undo after delete / clear-completed
-- [ ] Sort or filter by target date
 - [ ] Optional localStorage mode so tasks survive closing the tab
