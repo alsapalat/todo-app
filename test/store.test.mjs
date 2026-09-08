@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  add, toggle, rename, remove, clearDone, filter, counts, parse, load, save,
+  add, toggle, update, remove, clearDone, filter, counts, parse, load, save,
   STORAGE_KEY, MAX_LEN,
 } from '../src/store.js';
 
@@ -42,14 +42,45 @@ test('toggle flips only the target and does not mutate', () => {
   assert.equal(before[0].done, false);
 });
 
-test('rename updates the title', () => {
-  const before = add([], 'old');
-  assert.equal(rename(before, before[0].id, 'new')[0].title, 'new');
+test('new tasks start with no notes and no target date', () => {
+  const [t] = add([], 'a');
+  assert.equal(t.notes, '');
+  assert.equal(t.due, null);
 });
 
-test('rename to blank deletes the task', () => {
+test('update patches only the keys it is given', () => {
+  const before = update(add([], 'old'), null, {});
+  const id = before[0].id;
+  const titled = update(before, id, { title: 'new' });
+  assert.equal(titled[0].title, 'new');
+  assert.equal(titled[0].notes, '');
+
+  const noted = update(titled, id, { notes: '<b>why</b>' });
+  assert.equal(noted[0].title, 'new');
+  assert.equal(noted[0].notes, '<strong>why</strong>');
+});
+
+test('update keeps the old title when handed a blank one', () => {
   const before = add([], 'old');
-  assert.deepEqual(rename(before, before[0].id, '  '), []);
+  assert.equal(update(before, before[0].id, { title: '   ' })[0].title, 'old');
+});
+
+test('update sanitises notes and validates the date', () => {
+  const before = add([], 'a');
+  const id = before[0].id;
+  assert.equal(
+    update(before, id, { notes: '<script>alert(1)</script><i>ok</i>' })[0].notes,
+    '<em>ok</em>',
+  );
+  assert.equal(update(before, id, { due: '2026-09-20' })[0].due, '2026-09-20');
+  assert.equal(update(before, id, { due: '2026-02-30' })[0].due, null);
+  assert.equal(update(before, id, { due: '' })[0].due, null);
+});
+
+test('update leaves other tasks untouched', () => {
+  const before = add(add([], 'a'), 'b');
+  const after = update(before, before[0].id, { title: 'changed' });
+  assert.equal(after[1], before[1]);
 });
 
 test('remove drops the task', () => {
@@ -85,7 +116,14 @@ test('parse rejects junk and coerces shape', () => {
   assert.deepEqual(parse('[{"id":"1","title":"   "}]'), []);
 
   const [t] = parse('[{"id":"1","title":" hi ","done":"yes","createdAt":5}]');
-  assert.deepEqual(t, { id: '1', title: 'hi', done: true, createdAt: 5 });
+  assert.deepEqual(t, { id: '1', title: 'hi', done: true, notes: '', due: null, createdAt: 5 });
+});
+
+test('parse scrubs stored notes and drops an invalid date', () => {
+  const [t] = parse('[{"id":"1","title":"hi","notes":"<img src=x onerror=go()>n","due":"nope"}]');
+  assert.equal(t.notes.includes('onerror'), false);
+  assert.equal(t.due, null);
+  assert.equal(parse('[{"id":"1","title":"hi","due":"2026-09-20"}]')[0].due, '2026-09-20');
 });
 
 test('save then load round-trips through storage', () => {

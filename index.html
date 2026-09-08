@@ -26,6 +26,11 @@
     <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></symbol>
     <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.25" /><path d="M12 2.5v2.25M12 19.25v2.25M4.22 4.22l1.6 1.6M18.18 18.18l1.6 1.6M2.5 12h2.25M19.25 12h2.25M4.22 19.78l1.6-1.6M18.18 5.82l1.6-1.6" /></symbol>
     <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.8A8.75 8.75 0 0 1 9.2 3.5a8.75 8.75 0 1 0 11.3 11.3Z" /></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M6 4.5h12v15H6zM9 9h6M9 12.5h6M9 16h3.5" /></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><path d="M4.5 6.5h15v13h-15zM4.5 10.5h15M8.5 3.5v3M15.5 3.5v3" /></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9.5 5.5 7 6.5-7 6.5" /></symbol>
+    <symbol id="i-ul" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h.01M4.5 12h.01M4.5 17.5h.01" /></symbol>
+    <symbol id="i-ol" viewBox="0 0 24 24"><path d="M10 6.5h10M10 12h10M10 17.5h10M4 5h1.5v4M4 9h3M4 13.5h3v2H4.5v2H7" /></symbol>
     <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M4 13h4l1.5 3h5L16 13h4M4 13l2.5-7h11L20 13v5.5H4V13Z" /></symbol>
   </svg>
 
@@ -80,6 +85,62 @@
       </button>
     </form>
   </div>
+
+  <dialog class="sheet" id="details" aria-labelledby="sheet-title">
+    <form class="sheet-form" id="details-form" method="dialog">
+      <header class="sheet-head">
+        <h2 id="sheet-title" tabindex="-1" autofocus>Details</h2>
+        <button class="act" id="sheet-close" type="button" aria-label="Close">
+          <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+        </button>
+      </header>
+
+      <div class="sheet-body">
+        <label class="field">
+          <span class="field-label">Task</span>
+          <input class="input field-input" id="d-title" type="text" maxlength="200"
+                 autocomplete="off" enterkeyhint="done" />
+        </label>
+
+        <div class="field">
+          <span class="field-label" id="d-notes-label">Description</span>
+          <div class="rt">
+            <div class="rt-bar" id="rt-bar" role="toolbar" aria-label="Text formatting">
+              <button class="rt-btn" type="button" data-cmd="bold" aria-label="Bold" aria-pressed="false"><b>B</b></button>
+              <button class="rt-btn" type="button" data-cmd="italic" aria-label="Italic" aria-pressed="false"><i>I</i></button>
+              <button class="rt-btn" type="button" data-cmd="underline" aria-label="Underline" aria-pressed="false"><u>U</u></button>
+              <button class="rt-btn" type="button" data-cmd="strikeThrough" aria-label="Strikethrough" aria-pressed="false"><s>S</s></button>
+              <span class="rt-sep" aria-hidden="true"></span>
+              <button class="rt-btn" type="button" data-cmd="insertUnorderedList" aria-label="Bulleted list" aria-pressed="false">
+                <svg class="icon" aria-hidden="true"><use href="#i-ul" /></svg>
+              </button>
+              <button class="rt-btn" type="button" data-cmd="insertOrderedList" aria-label="Numbered list" aria-pressed="false">
+                <svg class="icon" aria-hidden="true"><use href="#i-ol" /></svg>
+              </button>
+            </div>
+            <div class="rt-body is-empty" id="d-notes" contenteditable="true" role="textbox"
+                 aria-multiline="true" aria-labelledby="d-notes-label"
+                 data-placeholder="Add more detail…"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label" id="d-due-label">Target date</span>
+          <div class="date-row">
+            <input class="input field-input" id="d-due" type="date" aria-labelledby="d-due-label" />
+            <button class="act" id="d-due-clear" type="button" aria-label="Clear target date">
+              <svg class="icon" aria-hidden="true"><use href="#i-x" /></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="sheet-foot">
+        <button class="btn" id="sheet-cancel" type="button">Cancel</button>
+        <button class="btn primary" type="submit" value="save">Save</button>
+      </footer>
+    </form>
+  </dialog>
 
   <p class="toast" id="toast" role="status" aria-live="polite"></p>
 

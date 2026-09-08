@@ -78,8 +78,21 @@ Helper scripts live in `/Users/adamleeapalat/Projects/discord-claude-setup/bin` 
   not. No stored value means "follow the system", and `src/app.js` keeps following
   system changes while that is the case. An inline script in `<head>` applies the
   override before first paint to avoid a flash.
-- `npm test` runs `node --test test/store.test.mjs`. Note: `node --test <dir>` is
-  broken on the installed Node 23.6.1 — point it at the file.
+- `npm test` runs `node --test test/*.test.mjs`. Note: `node --test <dir>` is
+  broken on the installed Node 23.6.1 — point it at files or a glob.
+- `npm run check` drives `test/browser/check.html` in headless Chrome for the
+  parts unit tests cannot reach (dialog, storage round trip, rendered rows).
+  Run it after touching the details sheet — that is where the `close`-event bug
+  below was caught.
+- The details sheet saves on the form's `submit` event, NOT on the dialog's
+  `close` event: `close` is not reliably delivered for a `method="dialog"`
+  submit (it never fired at all under headless Chrome), which silently dropped
+  every edit. Do not move the save back to `close`.
+- Description HTML is untrusted. `src/richtext.js` is an allowlist sanitiser
+  written without the DOM so it is testable in node: text is escaped, every
+  attribute is dropped, unknown tags lose their markup but keep their text, and
+  script/style/svg subtrees are discarded. Notes are sanitised on save AND on
+  parse, so bad data already in storage cannot come back.
 - `npm run dev` serves the folder on :3000 via `scripts/serve.mjs` (no deps).
 - Headless Chrome ignores `--window-size` for the viewport here; to shoot a true
   390px view, load the page in a 390px `<iframe>` and screenshot that.

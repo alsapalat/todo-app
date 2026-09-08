@@ -6,6 +6,7 @@
   "description": "A simple, mobile-first single-page to-do list backed by sessionStorage.",
   "scripts": {
     "dev": "node scripts/serve.mjs",
-    "test": "node --test test/store.test.mjs test/theme.test.mjs"
+    "test": "node --test test/*.test.mjs",
+    "check": "node scripts/check-browser.mjs"
   }
 }

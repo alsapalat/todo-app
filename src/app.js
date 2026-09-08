@@ -1,8 +1,10 @@
 // UI layer: renders the store into the DOM and wires up events.
 import {
-  add, toggle, rename, remove, clearDone, filter, counts, load, save, MAX_LEN,
+  add, toggle, update, remove, clearDone, filter, counts, load, save, MAX_LEN,
 } from './store.js';
 import { readTheme, writeTheme, nextTheme, resolveTheme } from './theme.js';
+import { sanitizeHtml, isEmptyHtml } from './richtext.js';
+import { toISODate, formatDue, isOverdue } from './dates.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -21,11 +23,21 @@ const els = {
   theme: $('theme'),
   themeIcon: $('theme-icon'),
   themeColor: $('theme-color'),
+  sheet: $('details'),
+  sheetForm: $('details-form'),
+  sheetClose: $('sheet-close'),
+  sheetCancel: $('sheet-cancel'),
+  dTitle: $('d-title'),
+  dNotes: $('d-notes'),
+  dDue: $('d-due'),
+  dDueClear: $('d-due-clear'),
+  rtBar: $('rt-bar'),
 };
 
 let tasks = load();
 let current = 'all';
-let editingId = null;
+let openId = null; // task whose details sheet is open
+let today = toISODate();
 
 const darkQuery = matchMedia('(prefers-color-scheme: dark)');
 let theme = resolveTheme(readTheme(), darkQuery.matches);
@@ -36,8 +48,8 @@ const EMPTY_COPY = {
   done: ['Nothing done yet', 'Completed tasks land here.'],
 };
 
-const icon = (name) =>
-  `<svg class="icon" aria-hidden="true"><use href="#i-${name}" /></svg>`;
+const icon = (name, cls = 'icon') =>
+  `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}" /></svg>`;
 
 const escape = (s) =>
   s.replace(/[&<>"']/g, (c) => (
@@ -58,6 +70,8 @@ function toast(msg) {
   toastTimer = setTimeout(() => els.toast.classList.remove('show'), 2200);
 }
 
+// --- list ------------------------------------------------------------
+
 function render() {
   const visible = filter(tasks, current);
   const { total, active, done } = counts(tasks);
@@ -77,20 +91,19 @@ function render() {
   for (const btn of els.filters.children) {
     btn.setAttribute('aria-selected', String(btn.dataset.filter === current));
   }
-
-  if (editingId) {
-    const input = els.list.querySelector('.edit-input');
-    input?.focus();
-    input?.setSelectionRange(input.value.length, input.value.length);
-  }
 }
 
 function row(t) {
-  const editing = t.id === editingId;
-  const body = editing
-    ? `<input class="edit-input" type="text" maxlength="${MAX_LEN}"
-         value="${escape(t.title)}" aria-label="Edit task" enterkeyhint="done" />`
-    : `<span class="label" data-act="edit">${escape(t.title)}</span>`;
+  const hasNotes = !isEmptyHtml(t.notes);
+  const meta = [];
+
+  if (hasNotes) meta.push(`<span class="tag">${icon('note', 'icon icon-xs')}Notes</span>`);
+  if (t.due) {
+    const late = !t.done && isOverdue(t.due, today);
+    meta.push(
+      `<span class="tag${late ? ' late' : ''}">${icon('calendar', 'icon icon-xs')}${escape(formatDue(t.due, today))}</span>`,
+    );
+  }
 
   return `
     <li class="item${t.done ? ' done' : ''}" data-id="${t.id}">
@@ -98,13 +111,110 @@ function row(t) {
               aria-label="${t.done ? 'Mark as not done' : 'Mark as done'}">
         <span class="box">${icon('check')}</span>
       </button>
-      ${body}
-      ${editing ? '' : `<button class="act" data-act="edit" aria-label="Edit task">${icon('pencil')}</button>`}
+      <button class="body" data-act="details" aria-label="Details for ${escape(t.title)}">
+        <span class="body-text">
+          <span class="label">${escape(t.title)}</span>
+          ${meta.length ? `<span class="meta">${meta.join('')}</span>` : ''}
+        </span>
+        ${icon('chevron', 'icon icon-xs chevron')}
+      </button>
       <button class="act danger" data-act="remove" aria-label="Delete task">${icon('trash')}</button>
     </li>`;
 }
 
-// --- events ----------------------------------------------------------
+// --- details sheet ---------------------------------------------------
+
+function openDetails(id) {
+  const task = tasks.find((t) => t.id === id);
+  if (!task) return;
+
+  openId = id;
+  els.dTitle.value = task.title;
+  els.dNotes.innerHTML = sanitizeHtml(task.notes);
+  els.dDue.value = task.due ?? '';
+  syncNotes();
+  syncToolbar();
+  els.sheet.showModal();
+}
+
+// Saving hangs off submit rather than the dialog's close event: `close` is not
+// reliably delivered for a method="dialog" submit, and submit says what we mean.
+els.sheetForm.addEventListener('submit', () => {
+  const id = openId;
+  openId = null;
+  if (!id) return;
+
+  commit(update(tasks, id, {
+    title: els.dTitle.value,
+    notes: els.dNotes.innerHTML,
+    due: els.dDue.value,
+  }));
+});
+
+function dismiss() {
+  openId = null; // discard: nothing is written on the way out
+  els.sheet.close();
+}
+els.sheetClose.addEventListener('click', dismiss);
+els.sheetCancel.addEventListener('click', dismiss);
+els.sheet.addEventListener('cancel', () => { openId = null; }); // Esc
+
+// Tapping the backdrop closes without saving; the form itself swallows the click.
+els.sheet.addEventListener('click', (e) => {
+  if (e.target === els.sheet) dismiss();
+});
+
+els.dDueClear.addEventListener('click', () => {
+  els.dDue.value = '';
+  els.dDue.focus();
+});
+
+// --- rich text -------------------------------------------------------
+
+const COMMANDS = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
+
+const syncNotes = () =>
+  els.dNotes.classList.toggle('is-empty', isEmptyHtml(els.dNotes.innerHTML));
+
+function syncToolbar() {
+  for (const btn of els.rtBar.querySelectorAll('[data-cmd]')) {
+    let on = false;
+    try { on = document.queryCommandState(btn.dataset.cmd); } catch { /* not focused */ }
+    btn.setAttribute('aria-pressed', String(on));
+  }
+}
+
+// Keep the caret where it is when a toolbar button is pressed.
+els.rtBar.addEventListener('mousedown', (e) => {
+  if (e.target.closest('[data-cmd]')) e.preventDefault();
+});
+
+els.rtBar.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-cmd]');
+  if (!btn || !COMMANDS.includes(btn.dataset.cmd)) return;
+  els.dNotes.focus();
+  // Ask for tags rather than inline styles — the sanitiser keeps tags, not styles.
+  try { document.execCommand('styleWithCSS', false, false); } catch { /* not supported */ }
+  document.execCommand(btn.dataset.cmd, false, null);
+  syncNotes();
+  syncToolbar();
+});
+
+// Paste as plain text so foreign markup never enters the field in the first place.
+els.dNotes.addEventListener('paste', (e) => {
+  e.preventDefault();
+  const text = e.clipboardData?.getData('text/plain') ?? '';
+  document.execCommand('insertText', false, text);
+});
+
+els.dNotes.addEventListener('input', syncNotes);
+document.addEventListener('selectionchange', () => {
+  if (els.sheet.open && els.dNotes.contains(document.getSelection()?.anchorNode ?? null)) {
+    syncToolbar();
+  }
+});
+
+// --- composer, filters, list events ----------------------------------
 
 els.composer.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -124,7 +234,6 @@ els.filters.addEventListener('click', (e) => {
   const btn = e.target.closest('.filter');
   if (!btn) return;
   current = btn.dataset.filter;
-  editingId = null;
   render();
 });
 
@@ -142,28 +251,7 @@ els.list.addEventListener('click', (e) => {
 
   if (trigger.dataset.act === 'toggle') return commit(toggle(tasks, id));
   if (trigger.dataset.act === 'remove') return commit(remove(tasks, id));
-  if (trigger.dataset.act === 'edit') {
-    editingId = id;
-    render();
-  }
-});
-
-function finishEdit(input, save_ = true) {
-  const id = editingId;
-  if (!id) return;
-  editingId = null;
-  if (save_) commit(rename(tasks, id, input.value));
-  else render();
-}
-
-els.list.addEventListener('keydown', (e) => {
-  if (!e.target.classList.contains('edit-input')) return;
-  if (e.key === 'Enter') { e.preventDefault(); finishEdit(e.target, true); }
-  if (e.key === 'Escape') finishEdit(e.target, false);
-});
-
-els.list.addEventListener('focusout', (e) => {
-  if (e.target.classList.contains('edit-input')) finishEdit(e.target, true);
+  if (trigger.dataset.act === 'details') openDetails(id);
 });
 
 // --- theme -----------------------------------------------------------
@@ -193,10 +281,21 @@ darkQuery.addEventListener('change', (e) => {
   if (!readTheme()) applyTheme(e.matches ? 'dark' : 'light');
 });
 
-applyTheme(theme);
+// A tab left open overnight should not keep calling yesterday "Today".
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) return;
+  const now = toISODate();
+  if (now === today) return;
+  today = now;
+  els.date.textContent = dateLabel();
+  render();
+});
 
-els.date.textContent = new Date().toLocaleDateString(undefined, {
+const dateLabel = () => new Date().toLocaleDateString(undefined, {
   weekday: 'short', month: 'short', day: 'numeric',
 });
+
+applyTheme(theme);
+els.date.textContent = dateLabel();
 els.addBtn.disabled = true;
 render();

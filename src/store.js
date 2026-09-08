@@ -1,6 +1,9 @@
 // Task store. Pure reducers over a plain array + a thin sessionStorage layer,
 // so the logic is testable in node without a DOM.
 
+import { sanitizeHtml, MAX_NOTES } from './richtext.js';
+import { isISODate } from './dates.js';
+
 export const STORAGE_KEY = 'todo-app:v1';
 export const FILTERS = ['all', 'active', 'done'];
 export const MAX_LEN = 200;
@@ -13,17 +16,24 @@ export const normalize = (text) => String(text ?? '').trim().slice(0, MAX_LEN);
 export function add(tasks, text) {
   const title = normalize(text);
   if (!title) return tasks;
-  return [...tasks, { id: newId(), title, done: false, createdAt: Date.now() }];
+  return [...tasks, { id: newId(), title, done: false, notes: '', due: null, createdAt: Date.now() }];
 }
 
 export function toggle(tasks, id) {
   return tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
 }
 
-export function rename(tasks, id, text) {
-  const title = normalize(text);
-  if (!title) return remove(tasks, id); // emptying a task deletes it
-  return tasks.map((t) => (t.id === id ? { ...t, title } : t));
+// Partial edit from the details sheet. Only the keys present are touched, and a
+// blank title is ignored rather than wiping the task you opened.
+export function update(tasks, id, patch = {}) {
+  return tasks.map((t) => {
+    if (t.id !== id) return t;
+    const next = { ...t };
+    if ('title' in patch) next.title = normalize(patch.title) || t.title;
+    if ('notes' in patch) next.notes = sanitizeHtml(patch.notes).slice(0, MAX_NOTES);
+    if ('due' in patch) next.due = isISODate(patch.due) ? patch.due : null;
+    return next;
+  });
 }
 
 export const remove = (tasks, id) => tasks.filter((t) => t.id !== id);
@@ -55,6 +65,8 @@ export function parse(raw) {
         id: t.id,
         title: normalize(t.title),
         done: Boolean(t.done),
+        notes: sanitizeHtml(t.notes).slice(0, MAX_NOTES),
+        due: isISODate(t.due) ? t.due : null,
         createdAt: Number(t.createdAt) || Date.now(),
       }))
       .filter((t) => t.title);
