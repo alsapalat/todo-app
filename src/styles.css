@@ -1,37 +1,31 @@
-/* Neutral, flat, mobile-first. Tokens first so dark mode is a token swap. */
+/* Neutral, flat, mobile-first. One token set; light-dark() picks the value and
+   `color-scheme` decides which side wins, so the toggle is a single attribute. */
 :root {
-  --bg: #fafaf9;
-  --surface: #ffffff;
-  --border: #e7e5e4;
-  --border-strong: #d6d3d1;
-  --text: #1c1917;
-  --muted: #78716c;
-  --faint: #a8a29e;
-  --accent: #1c1917;
-  --accent-text: #fafaf9;
-  --danger: #b45309;
-  --ring: #a8a29e;
-  --shadow: 0 1px 2px rgb(28 25 23 / 0.06), 0 1px 3px rgb(28 25 23 / 0.04);
+  color-scheme: light dark;
+
+  --bg: light-dark(#fafaf9, #0c0a09);
+  --surface: light-dark(#ffffff, #1c1917);
+  --border: light-dark(#e7e5e4, #292524);
+  --border-strong: light-dark(#d6d3d1, #3f3b39);
+  --text: light-dark(#1c1917, #fafaf9);
+  --muted: light-dark(#78716c, #a8a29e);
+  --faint: light-dark(#a8a29e, #78716c);
+  --accent: light-dark(#1c1917, #fafaf9);
+  --accent-text: light-dark(#fafaf9, #1c1917);
+  --danger: light-dark(#b45309, #d97706);
+  --ring: light-dark(#a8a29e, #57534e);
+
+  --shadow-1: light-dark(rgb(28 25 23 / 0.06), transparent);
+  --shadow-2: light-dark(rgb(28 25 23 / 0.04), transparent);
+  --shadow: 0 1px 2px var(--shadow-1), 0 1px 3px var(--shadow-2);
+
   --radius: 14px;
   --tap: 44px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0a09;
-    --surface: #1c1917;
-    --border: #292524;
-    --border-strong: #3f3b39;
-    --text: #fafaf9;
-    --muted: #a8a29e;
-    --faint: #78716c;
-    --accent: #fafaf9;
-    --accent-text: #1c1917;
-    --danger: #d97706;
-    --ring: #57534e;
-    --shadow: none;
-  }
-}
+/* Set by the toggle; absent means "follow the system". */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 
@@ -82,10 +76,32 @@ body {
 
 .header-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
+
+.header-side {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: -8px; /* pull the toggle flush with the header padding */
+}
+
+.theme {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color .15s, background .15s;
+}
+.theme:hover { color: var(--text); background: var(--surface); }
 
 h1 {
   margin: 0;

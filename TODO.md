@@ -5,7 +5,8 @@
 - [x] sessionStorage-backed store with pure reducers (`src/store.js`)
 - [x] Add / complete / rename / delete, All·Active·Done filters, clear completed
 - [x] Light + dark theme via `prefers-color-scheme`
-- [x] Unit tests for the store (`npm test`, 15 passing)
+- [x] Light/dark toggle in the header, overriding the system setting
+- [x] Unit tests for the store and theme (`npm test`, 22 passing)
 - [x] Dependency-free dev server (`npm run dev`)
 
 ## Next (unstarted — ask before picking up)

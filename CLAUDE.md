@@ -67,9 +67,17 @@ Helper scripts live in `/Users/adamleeapalat/Projects/discord-claude-setup/bin` 
   with an in-memory storage double; `src/app.js` owns all DOM work. Keep that split.
 - Store is `sessionStorage` (key `todo-app:v1`) by deliberate choice — tasks die with
   the tab. `load()`/`save()` swallow storage errors so private mode degrades quietly.
-- Design tokens live at the top of `src/styles.css`; dark mode is a token swap under
-  `prefers-color-scheme`. Neutral stone palette, flat stroke-only SVG icons (sprite
-  is inlined in `index.html`), 44px tap targets, 16px inputs so iOS won't zoom.
+- Design tokens live at the top of `src/styles.css`, declared once with CSS
+  `light-dark()`; the theme is chosen by `color-scheme`, which `[data-theme]` on
+  `<html>` overrides. Adding a colour means one token, not a light/dark pair.
+  Requires Baseline 2024 browsers (Chrome 123+, Safari 17.5+, Firefox 120+).
+  Neutral stone palette, flat stroke-only SVG icons (sprite is inlined in
+  `index.html`), 44px tap targets, 16px inputs so iOS won't zoom.
+- Theme override lives in `localStorage` (`todo-app:theme`), deliberately not
+  sessionStorage — a display preference should outlive the tab, task data should
+  not. No stored value means "follow the system", and `src/app.js` keeps following
+  system changes while that is the case. An inline script in `<head>` applies the
+  override before first paint to avoid a flash.
 - `npm test` runs `node --test test/store.test.mjs`. Note: `node --test <dir>` is
   broken on the installed Node 23.6.1 — point it at the file.
 - `npm run dev` serves the folder on :3000 via `scripts/serve.mjs` (no deps).

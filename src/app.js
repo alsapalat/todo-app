@@ -2,6 +2,7 @@
 import {
   add, toggle, rename, remove, clearDone, filter, counts, load, save, MAX_LEN,
 } from './store.js';
+import { readTheme, writeTheme, nextTheme, resolveTheme } from './theme.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -17,11 +18,17 @@ const els = {
   addBtn: $('add'),
   clear: $('clear'),
   toast: $('toast'),
+  theme: $('theme'),
+  themeIcon: $('theme-icon'),
+  themeColor: $('theme-color'),
 };
 
 let tasks = load();
 let current = 'all';
 let editingId = null;
+
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+let theme = resolveTheme(readTheme(), darkQuery.matches);
 
 const EMPTY_COPY = {
   all: ['No tasks yet', 'Add one below to get started.'],
@@ -158,6 +165,35 @@ els.list.addEventListener('keydown', (e) => {
 els.list.addEventListener('focusout', (e) => {
   if (e.target.classList.contains('edit-input')) finishEdit(e.target, true);
 });
+
+// --- theme -----------------------------------------------------------
+
+// Matches the token values in styles.css so mobile browser chrome follows along.
+const BAR = { light: '#fafaf9', dark: '#0c0a09' };
+
+function applyTheme(next, { persist = false } = {}) {
+  theme = next;
+  document.documentElement.dataset.theme = next;
+  els.themeIcon.setAttribute('href', next === 'dark' ? '#i-sun' : '#i-moon');
+  els.themeColor.setAttribute('content', BAR[next]);
+
+  const label = `Switch to ${nextTheme(next)} mode`;
+  els.theme.setAttribute('aria-label', label);
+  els.theme.title = label;
+
+  if (persist) writeTheme(next);
+}
+
+els.theme.addEventListener('click', () => {
+  applyTheme(nextTheme(theme), { persist: true });
+});
+
+// Only relevant while no override is stored: follow the system if it changes.
+darkQuery.addEventListener('change', (e) => {
+  if (!readTheme()) applyTheme(e.matches ? 'dark' : 'light');
+});
+
+applyTheme(theme);
 
 els.date.textContent = new Date().toLocaleDateString(undefined, {
   weekday: 'short', month: 'short', day: 'numeric',
