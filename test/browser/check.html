@@ -35,6 +35,11 @@ f.onload = async () => {
 
     w.addEventListener('error', (e) => log.push(`FAIL uncaught: ${e.message}`));
 
+    // Regression: a CSS `display` rule outranks the UA style for [hidden], so
+    // hiding these elements needs the explicit override in styles.css.
+    ok('clear-completed is hidden on an empty list', d.getElementById('clear').offsetParent === null);
+    ok('the task list is hidden when empty', d.getElementById('list').offsetParent === null);
+
     // Add through the real composer.
     d.getElementById('input').value = 'Round trip';
     d.getElementById('composer').dispatchEvent(new w.Event('submit', { cancelable: true }));
@@ -113,6 +118,12 @@ f.onload = async () => {
     const d2 = f.contentDocument;
     ok('tasks survive a reload', JSON.stringify(store().map((t) => t.title).sort()) === JSON.stringify(beforeReload));
     ok('the reloaded list renders them', d2.querySelectorAll('.item').length === beforeReload.length);
+
+    const clearBtn = d2.getElementById('clear');
+    ok('clear-completed stays hidden with nothing done', clearBtn.offsetParent === null);
+    d2.querySelector('.item .check').click();
+    await wait(60);
+    ok('clear-completed appears once a task is done', clearBtn.offsetParent !== null);
 
     out.textContent = log.join('\n');
   } catch (err) {

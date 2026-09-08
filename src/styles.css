@@ -29,6 +29,11 @@
 
 * { box-sizing: border-box; }
 
+/* The UA rule for [hidden] is display:none, which any display declaration in
+   this file outranks. Without this, hiding .list or .clear silently does
+   nothing. */
+[hidden] { display: none !important; }
+
 html { -webkit-text-size-adjust: 100%; }
 
 body {
