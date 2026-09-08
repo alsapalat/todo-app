@@ -2,8 +2,8 @@
 
 ## Done
 - [x] Scaffold single-page todo app (mobile-first, neutral, flat icons)
-- [x] sessionStorage-backed store with pure reducers (`src/store.js`)
-- [x] Add / complete / rename / delete, All·Active·Done filters, clear completed
+- [x] Pure task reducers (`src/tasks.js`)
+- [x] Add / complete / edit / delete, All·Active·Done filters, clear completed
 - [x] Light + dark theme via `prefers-color-scheme`
 - [x] Light/dark toggle in the header, overriding the system setting
 - [x] Task details sheet: rich-text description + target date
@@ -13,7 +13,6 @@
 - [x] Live at https://alsapalat.github.io/todo-app/ (auto-deploys on push to `main`)
 - [x] Unit tests for the pure modules and the store (`npm test`, 60 passing)
 - [x] Headless browser check of the UI, grouping and reload persistence (`npm run check`, 26 passing)
-- [x] Dependency-free dev server (`npm run dev`)
 
 ## Next (unstarted — ask before picking up)
 - [ ] Reorder tasks (drag or up/down)
