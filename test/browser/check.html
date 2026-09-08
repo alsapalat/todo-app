@@ -23,7 +23,7 @@ f.onload = async () => {
   try {
     const w = f.contentWindow;
     const d = f.contentDocument;
-    const store = () => JSON.parse(w.sessionStorage.getItem('todo-app:v1') || '[]');
+    const store = () => JSON.parse(w.localStorage.getItem('todo-app') || '{}')?.state?.tasks ?? [];
     const openDetails = async () => {
       d.querySelector('.item .body').click();
       await wait(50);
@@ -105,6 +105,14 @@ f.onload = async () => {
     await wait(60);
     ok('one group renders no separator', d.querySelectorAll('.group-head').length === 0);
     ok('an ungrouped row shows its date again', /Dec 25/.test(d.querySelector('.item .meta').textContent));
+
+    // The point of the zustand persist layer: survive a full reload.
+    const beforeReload = store().map((t) => t.title).sort();
+    await new Promise((done) => { f.onload = done; f.contentWindow.location.reload(); });
+    await wait(150);
+    const d2 = f.contentDocument;
+    ok('tasks survive a reload', JSON.stringify(store().map((t) => t.title).sort()) === JSON.stringify(beforeReload));
+    ok('the reloaded list renders them', d2.querySelectorAll('.item').length === beforeReload.length);
 
     out.textContent = log.join('\n');
   } catch (err) {

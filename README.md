@@ -1,13 +1,16 @@
 # todo-app
 
-A single-page to-do list. Mobile-first, neutral palette, flat stroke icons,
-no build step and no dependencies. Tasks live in `sessionStorage`, so they
-persist across reloads and disappear when the tab closes.
+A single-page to-do list. Mobile-first, neutral palette, flat stroke icons.
+Tasks are held in a zustand store persisted to `localStorage`, so they survive
+reloads and closing the tab. Built with Vite and deployed to GitHub Pages.
 
 ```bash
-npm run dev      # http://localhost:3000
-npm test         # pure logic: store, theme, sanitiser, dates (node:test)
-npm run check    # details sheet + storage round trip, in headless Chrome
+npm install
+npm run dev      # http://localhost:3000 (bound to every interface)
+npm test         # pure logic, no browser needed (node:test)
+npm run check    # the real UI in headless Chrome: sheet, grouping, persistence
+npm run build    # production bundle into dist/
+npm run preview  # serve dist/ exactly as Pages will
 ```
 
 ## Layout
@@ -16,7 +19,8 @@ npm run check    # details sheet + storage round trip, in headless Chrome
 | --------------------- | ---------------------------------------------- |
 | `index.html`          | Markup + the inline SVG icon sprite            |
 | `src/styles.css`      | Design tokens, light/dark, mobile-first layout  |
-| `src/store.js`        | Pure task reducers + sessionStorage persistence |
+| `src/tasks.js`        | Pure task reducers — no storage, no zustand       |
+| `src/store.js`        | zustand store + `persist` to `localStorage`      |
 | `src/theme.js`        | Theme preference (localStorage) + resolution     |
 | `src/richtext.js`     | Allowlist sanitiser for the description field    |
 | `src/dates.js`        | Target-date parsing, comparison and labels       |
@@ -39,3 +43,10 @@ npm run check    # details sheet + storage round trip, in headless Chrome
 
 Colours are declared once with CSS `light-dark()`, so the app needs a browser with
 Baseline 2024 support (Chrome 123+, Safari 17.5+, Firefox 120+).
+
+## Deploying
+
+Pushing to `main` runs `.github/workflows/deploy.yml`, which installs, tests,
+builds and publishes `dist/` to GitHub Pages. The repo's Pages source must be
+set to **GitHub Actions**. `base: './'` in `vite.config.js` keeps asset URLs
+relative, so the build works under a repo subpath as well as at a domain root.

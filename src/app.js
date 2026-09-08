@@ -1,7 +1,6 @@
 // UI layer: renders the store into the DOM and wires up events.
-import {
-  add, toggle, update, remove, clearDone, filter, counts, load, save, MAX_LEN,
-} from './store.js';
+import { store, durable, imported } from './store.js';
+import { filter, counts, MAX_LEN } from './tasks.js';
 import { readTheme, writeTheme, nextTheme, resolveTheme } from './theme.js';
 import { sanitizeHtml, isEmptyHtml } from './richtext.js';
 import { toISODate, formatDue, isOverdue } from './dates.js';
@@ -35,7 +34,9 @@ const els = {
   rtBar: $('rt-bar'),
 };
 
-let tasks = load();
+const tasks = () => store.getState().tasks;
+const actions = () => store.getState();
+
 let current = 'all';
 let openId = null; // task whose details sheet is open
 let today = toISODate();
@@ -57,12 +58,6 @@ const escape = (s) =>
     { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
   ));
 
-function commit(next) {
-  tasks = next;
-  if (!save(tasks)) toast('Storage unavailable — tasks are tab-only');
-  render();
-}
-
 let toastTimer;
 function toast(msg) {
   els.toast.textContent = msg;
@@ -74,8 +69,9 @@ function toast(msg) {
 // --- list ------------------------------------------------------------
 
 function render() {
-  const visible = filter(tasks, current);
-  const { total, active, done } = counts(tasks);
+  const all = tasks();
+  const visible = filter(all, current);
+  const { total, active, done } = counts(all);
 
   const groups = groupByDate(visible, today);
   // One group needs no separator to separate it from anything.
@@ -149,7 +145,7 @@ function row(t, showDue = true) {
 // --- details sheet ---------------------------------------------------
 
 function openDetails(id) {
-  const task = tasks.find((t) => t.id === id);
+  const task = tasks().find((t) => t.id === id);
   if (!task) return;
 
   openId = id;
@@ -168,11 +164,11 @@ els.sheetForm.addEventListener('submit', () => {
   openId = null;
   if (!id) return;
 
-  commit(update(tasks, id, {
+  actions().update(id, {
     title: els.dTitle.value,
     notes: els.dNotes.innerHTML,
     due: els.dDue.value,
-  }));
+  });
 });
 
 function dismiss() {
@@ -242,12 +238,12 @@ document.addEventListener('selectionchange', () => {
 
 els.composer.addEventListener('submit', (e) => {
   e.preventDefault();
-  const next = add(tasks, els.input.value);
-  if (next === tasks) return;
+  if (!els.input.value.trim()) return;
+
+  current = current === 'done' ? 'all' : current; // don't add into a view that hides it
+  actions().add(els.input.value);
   els.input.value = '';
   els.addBtn.disabled = true;
-  current = current === 'done' ? 'all' : current; // don't add into a view that hides it
-  commit(next);
 });
 
 els.input.addEventListener('input', () => {
@@ -262,8 +258,8 @@ els.filters.addEventListener('click', (e) => {
 });
 
 els.clear.addEventListener('click', () => {
-  const removed = counts(tasks).done;
-  commit(clearDone(tasks));
+  const removed = counts(tasks()).done;
+  actions().clearDone();
   toast(`Cleared ${removed} task${removed === 1 ? '' : 's'}`);
 });
 
@@ -273,8 +269,8 @@ els.list.addEventListener('click', (e) => {
   if (!item || !trigger) return;
   const { id } = item.dataset;
 
-  if (trigger.dataset.act === 'toggle') return commit(toggle(tasks, id));
-  if (trigger.dataset.act === 'remove') return commit(remove(tasks, id));
+  if (trigger.dataset.act === 'toggle') return actions().toggle(id);
+  if (trigger.dataset.act === 'remove') return actions().remove(id);
   if (trigger.dataset.act === 'details') openDetails(id);
 });
 
@@ -319,7 +315,13 @@ const dateLabel = () => new Date().toLocaleDateString(undefined, {
   weekday: 'short', month: 'short', day: 'numeric',
 });
 
+// Any store change repaints; nothing else calls render on task edits.
+store.subscribe(render);
+
 applyTheme(theme);
 els.date.textContent = dateLabel();
 els.addBtn.disabled = true;
 render();
+
+if (!durable) toast('Private mode — tasks last only for this tab');
+else if (imported) toast(`Brought ${imported} task${imported === 1 ? '' : 's'} over`);

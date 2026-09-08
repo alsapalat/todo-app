@@ -1,93 +1,87 @@
-// Task store. Pure reducers over a plain array + a thin sessionStorage layer,
-// so the logic is testable in node without a DOM.
+// Zustand store, persisted to localStorage.
+//
+// All task rules live in tasks.js; this layer only holds the current list,
+// exposes actions and handles persistence. Written against zustand/vanilla —
+// there is no React here.
+import { createStore } from 'zustand/vanilla';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import * as T from './tasks.js';
 
-import { sanitizeHtml, MAX_NOTES } from './richtext.js';
-import { isISODate } from './dates.js';
+export const STORAGE_KEY = 'todo-app';
+export const LEGACY_SESSION_KEY = 'todo-app:v1';
+export const VERSION = 1;
 
-export const STORAGE_KEY = 'todo-app:v1';
-export const FILTERS = ['all', 'active', 'done'];
-export const MAX_LEN = 200;
+// Private browsing can make localStorage throw on touch. Falling back to memory
+// keeps the app usable for the session instead of failing to start.
+const memoryStorage = () => {
+  const map = new Map();
+  return {
+    getItem: (k) => (map.has(k) ? map.get(k) : null),
+    setItem: (k, v) => map.set(k, String(v)),
+    removeItem: (k) => map.delete(k),
+  };
+};
 
-let seq = 0;
-const newId = () => `${Date.now().toString(36)}-${(seq++).toString(36)}`;
-
-export const normalize = (text) => String(text ?? '').trim().slice(0, MAX_LEN);
-
-export function add(tasks, text) {
-  const title = normalize(text);
-  if (!title) return tasks;
-  return [...tasks, { id: newId(), title, done: false, notes: '', due: null, createdAt: Date.now() }];
-}
-
-export function toggle(tasks, id) {
-  return tasks.map((t) => (t.id === id ? { ...t, done: !t.done } : t));
-}
-
-// Partial edit from the details sheet. Only the keys present are touched, and a
-// blank title is ignored rather than wiping the task you opened.
-export function update(tasks, id, patch = {}) {
-  return tasks.map((t) => {
-    if (t.id !== id) return t;
-    const next = { ...t };
-    if ('title' in patch) next.title = normalize(patch.title) || t.title;
-    if ('notes' in patch) next.notes = sanitizeHtml(patch.notes).slice(0, MAX_NOTES);
-    if ('due' in patch) next.due = isISODate(patch.due) ? patch.due : null;
-    return next;
-  });
-}
-
-export const remove = (tasks, id) => tasks.filter((t) => t.id !== id);
-
-export const clearDone = (tasks) => tasks.filter((t) => !t.done);
-
-export function filter(tasks, name) {
-  if (name === 'active') return tasks.filter((t) => !t.done);
-  if (name === 'done') return tasks.filter((t) => t.done);
-  return tasks;
-}
-
-export const counts = (tasks) => ({
-  total: tasks.length,
-  done: tasks.filter((t) => t.done).length,
-  active: tasks.filter((t) => !t.done).length,
-});
-
-// --- persistence -----------------------------------------------------
-
-// Anything that isn't a well-formed task is dropped rather than trusted.
-export function parse(raw) {
+export function pickStorage(candidate = globalThis.localStorage) {
   try {
-    const data = JSON.parse(raw);
-    if (!Array.isArray(data)) return [];
-    return data
-      .filter((t) => t && typeof t.id === 'string' && typeof t.title === 'string')
-      .map((t) => ({
-        id: t.id,
-        title: normalize(t.title),
-        done: Boolean(t.done),
-        notes: sanitizeHtml(t.notes).slice(0, MAX_NOTES),
-        due: isISODate(t.due) ? t.due : null,
-        createdAt: Number(t.createdAt) || Date.now(),
-      }))
-      .filter((t) => t.title);
+    const probe = '__todo_probe__';
+    candidate.setItem(probe, '1');
+    candidate.removeItem(probe);
+    return { storage: candidate, durable: true };
   } catch {
-    return [];
+    return { storage: memoryStorage(), durable: false };
   }
 }
 
-export function load(storage = globalThis.sessionStorage) {
+// One-time lift of tasks written by the old sessionStorage build, so upgrading
+// does not look like data loss.
+export function importLegacySession(local, session) {
   try {
-    return parse(storage?.getItem(STORAGE_KEY));
+    if (local.getItem(STORAGE_KEY)) return 0;
+    const raw = session?.getItem(LEGACY_SESSION_KEY);
+    if (!raw) return 0;
+
+    const tasks = T.sanitize(JSON.parse(raw));
+    if (!tasks.length) return 0;
+
+    local.setItem(STORAGE_KEY, JSON.stringify({ state: { tasks }, version: VERSION }));
+    return tasks.length;
   } catch {
-    return []; // private mode / storage disabled
+    return 0;
   }
 }
 
-export function save(tasks, storage = globalThis.sessionStorage) {
-  try {
-    storage?.setItem(STORAGE_KEY, JSON.stringify(tasks));
-    return true;
-  } catch {
-    return false;
-  }
+export function createTaskStore({ storage } = {}) {
+  return createStore(
+    persist(
+      (set) => ({
+        tasks: [],
+        add: (text) => set((s) => ({ tasks: T.add(s.tasks, text) })),
+        toggle: (id) => set((s) => ({ tasks: T.toggle(s.tasks, id) })),
+        update: (id, patch) => set((s) => ({ tasks: T.update(s.tasks, id, patch) })),
+        remove: (id) => set((s) => ({ tasks: T.remove(s.tasks, id) })),
+        clearDone: () => set((s) => ({ tasks: T.clearDone(s.tasks) })),
+      }),
+      {
+        name: STORAGE_KEY,
+        version: VERSION,
+        storage: createJSONStorage(() => storage),
+        partialize: (s) => ({ tasks: s.tasks }),
+        // Everything read back is re-validated; storage is not a trusted source.
+        merge: (persisted, current) => ({ ...current, tasks: T.sanitize(persisted?.tasks) }),
+      },
+    ),
+  );
 }
+
+const picked = pickStorage();
+
+/** True when tasks survive closing the tab; false in private-mode fallback. */
+export const durable = picked.durable;
+
+/** Number of tasks lifted from the old sessionStorage build on this load. */
+export const imported = durable
+  ? importLegacySession(picked.storage, globalThis.sessionStorage)
+  : 0;
+
+export const store = createTaskStore({ storage: picked.storage });

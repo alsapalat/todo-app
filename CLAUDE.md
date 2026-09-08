@@ -62,11 +62,19 @@ Helper scripts live in `/Users/adamleeapalat/Projects/discord-claude-setup/bin` 
 
 ## Project notes
 
-- Stack: vanilla HTML/CSS/ES modules. No framework, no build step, no dependencies.
-- `src/store.js` is pure (reducers + a storage shim) so it runs under `node --test`
-  with an in-memory storage double; `src/app.js` owns all DOM work. Keep that split.
-- Store is `sessionStorage` (key `todo-app:v1`) by deliberate choice — tasks die with
-  the tab. `load()`/`save()` swallow storage errors so private mode degrades quietly.
+- Stack: vanilla HTML/CSS/ES modules, bundled by Vite. zustand is the only runtime
+  dependency. No framework.
+- Three layers, and the split matters: `src/tasks.js` is pure reducers (no storage,
+  no zustand, testable in node), `src/store.js` is the zustand store that wraps them
+  and persists, `src/app.js` owns all DOM work. Task rules go in tasks.js.
+- Persistence is `localStorage` (key `todo-app`) via zustand's `persist` middleware.
+  This replaced sessionStorage when the app moved to GitHub Pages — tasks are meant
+  to survive closing the tab now. `pickStorage()` falls back to an in-memory store
+  when localStorage throws (private mode) so the app still runs.
+- `merge` re-runs `sanitize()` on everything read back: storage is not trusted, and
+  tampered or stale data cannot reach the UI.
+- `importLegacySession()` lifts tasks written by the old sessionStorage build once,
+  on first load. Safe to delete once nobody is running a pre-Pages tab.
 - Design tokens live at the top of `src/styles.css`, declared once with CSS
   `light-dark()`; the theme is chosen by `color-scheme`, which `[data-theme]` on
   `<html>` overrides. Adding a colour means one token, not a light/dark pair.
@@ -98,6 +106,12 @@ Helper scripts live in `/Users/adamleeapalat/Projects/discord-claude-setup/bin` 
   attribute is dropped, unknown tags lose their markup but keep their text, and
   script/style/svg subtrees are discarded. Notes are sanitised on save AND on
   parse, so bad data already in storage cannot come back.
-- `npm run dev` serves the folder on :3000 via `scripts/serve.mjs` (no deps).
+- `npm run dev` is Vite on :3000 with `host: true`, so the Tailscale IP works for
+  phone testing. `npm run build` emits `dist/`; `npm run preview` serves it.
+- Deploy is `.github/workflows/deploy.yml` on push to `main`. It runs `npm test`
+  but NOT `npm run check` — the browser check needs Chrome and is a local gate, not
+  a deploy blocker. Run it yourself before pushing UI changes.
+- `vite.config.js` sets `base: './'` so the bundle works under the `/todo-app/`
+  subpath GitHub Pages serves it from. Do not change it to an absolute base.
 - Headless Chrome ignores `--window-size` for the viewport here; to shoot a true
   390px view, load the page in a 390px `<iframe>` and screenshot that.
